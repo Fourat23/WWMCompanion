@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Build {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  editToken   String   @unique
+  title       String
+  description String   @default("")
+  tags        String   @default("[]") // JSON array of strings
+  patchVersion String  @default("")
+  weaponStyle String   @default("")
+  skills      String   @default("[]") // JSON array of skill references
+  traits      String   @default("[]") // JSON array of trait picks
+  statPriorities String @default("[]") // JSON array of stat priorities
+  pros        String   @default("")
+  cons        String   @default("")
+  howToPlay   String   @default("")
+  variants    String   @default("")
+  rotation    String   @default("[]") // JSON array of RotationAction
+  upvotes     Int      @default(0)
+  views       Int      @default(0)
+  published   Boolean  @default(true)
+  flagged     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  votes    Vote[]
+  comments Comment[]
+  reports  Report[]
+
+  @@index([published, upvotes])
+  @@index([published, createdAt])
+  @@index([tags])
+}
+
+model Skill {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  category    String   @default("") // e.g. "Sword", "Fist", "Bow", "Support"
+  description String   @default("")
+  cooldown    Float    @default(0)
+  castTime    Float    @default(0)
+  iconUrl     String   @default("")
+  tags        String   @default("[]") // JSON array
+  submittedBy String   @default("anonymous")
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([approved, category])
+  @@index([approved, name])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  buildId   String
+  voterIp   String   // hashed IP for uniqueness, not stored raw
+  value     Int      @default(1) // 1 or -1
+  createdAt DateTime @default(now())
+
+  build Build @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@unique([buildId, voterIp])
+  @@index([buildId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  buildId   String
+  author    String   @default("Anonymous")
+  content   String
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  build Build @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@index([buildId, createdAt])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  buildId   String?
+  commentId String?
+  reason    String
+  details   String   @default("")
+  status    String   @default("pending") // pending, reviewed, dismissed
+  createdAt DateTime @default(now())
+
+  build Build? @relation(fields: [buildId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
